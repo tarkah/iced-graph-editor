@@ -16,6 +16,7 @@ fn main() {
 enum Message {
     Graph(graph::Event),
     ToggleTheme,
+    DeleteNode(usize),
 }
 
 struct App {
@@ -39,10 +40,15 @@ impl Application for App {
             Node {
                 kind: node::Kind::B,
                 offset: Vector::new(150.0, 100.0),
-                edge: Some(2),
+                edge: Some(3),
             },
             Node {
                 kind: node::Kind::C,
+                offset: Vector::new(150.0, 300.0),
+                edge: Some(3),
+            },
+            Node {
+                kind: node::Kind::D,
                 offset: Vector::new(350.0, 200.0),
                 edge: None,
             },
@@ -82,6 +88,20 @@ impl Application for App {
 
                 Command::none()
             }
+            Message::DeleteNode(index) => {
+                self.nodes.remove(index);
+                self.nodes.iter_mut().for_each(|node| match &mut node.edge {
+                    edge if *edge == Some(index) => {
+                        edge.take();
+                    }
+                    edge if *edge > Some(index) => {
+                        *edge = edge.map(|index| index - 1);
+                    }
+                    _ => {}
+                });
+
+                Command::none()
+            }
         }
     }
 
@@ -94,7 +114,13 @@ impl Application for App {
                     .into(),
                 node::Kind::C => column![
                     text("Node C"),
-                    button(text("A button")).on_press(Message::ToggleTheme)
+                    button(text("Delete")).on_press(Message::DeleteNode(2))
+                ]
+                .spacing(5)
+                .into(),
+                node::Kind::D => column![
+                    text("Node D"),
+                    button(text("Toggle Theme")).on_press(Message::ToggleTheme)
                 ]
                 .spacing(5)
                 .into(),

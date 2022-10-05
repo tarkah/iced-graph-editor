@@ -5,6 +5,7 @@ pub enum Kind {
     A,
     B,
     C,
+    D,
 }
 
 #[derive(Debug, Clone, Copy)]
