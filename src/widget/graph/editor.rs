@@ -1,4 +1,4 @@
-use iced::{Color, Length, Point, Rectangle, Size, Vector};
+use iced::{Background, Color, Length, Point, Rectangle, Size, Vector};
 use iced_graphics::Renderer;
 use iced_native::widget::Tree;
 use iced_native::{event, layout, renderer, Element, Layout, Renderer as _, Widget};
@@ -13,17 +13,18 @@ pub enum Event {
 pub struct Editor<'a, Message, Renderer>
 where
     Renderer: iced_native::Renderer,
-    Renderer::Theme: node::StyleSheet,
+    Renderer::Theme: StyleSheet + node::StyleSheet,
 {
     nodes: Vec<Node<'a, Message, Renderer>>,
     max_node_size: Size,
     on_event: Box<dyn Fn(Event) -> Message + 'a>,
+    style: <Renderer::Theme as StyleSheet>::Style,
 }
 
 impl<'a, Message, Renderer> Editor<'a, Message, Renderer>
 where
     Renderer: iced_native::Renderer,
-    Renderer::Theme: node::StyleSheet,
+    Renderer::Theme: StyleSheet + node::StyleSheet,
 {
     pub fn new(
         nodes: Vec<Node<'a, Message, Renderer>>,
@@ -33,7 +34,13 @@ where
             nodes,
             max_node_size: Size::new(300.0, 300.0),
             on_event: Box::new(on_event),
+            style: Default::default(),
         }
+    }
+
+    pub fn style(mut self, style: impl Into<<Renderer::Theme as StyleSheet>::Style>) -> Self {
+        self.style = style.into();
+        self
     }
 }
 
@@ -41,7 +48,7 @@ impl<'a, Message, Backend, Theme> Widget<Message, Renderer<Backend, Theme>>
     for Editor<'a, Message, Renderer<Backend, Theme>>
 where
     Backend: iced_graphics::Backend,
-    Theme: node::StyleSheet,
+    Theme: StyleSheet + node::StyleSheet,
 {
     fn children(&self) -> Vec<Tree> {
         self.nodes
@@ -130,14 +137,18 @@ where
         cursor_position: Point,
         viewport: &Rectangle,
     ) {
+        let appearance = <Theme as StyleSheet>::appearance(theme, self.style);
+
         renderer.fill_quad(
             renderer::Quad {
                 bounds: layout.bounds(),
-                border_width: 1.0,
-                border_color: Color::BLACK,
-                border_radius: 0.0,
+                border_width: appearance.border_width,
+                border_color: appearance.border_color,
+                border_radius: appearance.border_radius,
             },
-            Color::TRANSPARENT,
+            appearance
+                .background
+                .unwrap_or_else(|| Color::TRANSPARENT.into()),
         );
 
         let pad = |rect: Rectangle, padding: f32| Rectangle {
@@ -243,10 +254,35 @@ impl<'a, Message, Backend, Theme> From<Editor<'a, Message, Renderer<Backend, The
     for Element<'a, Message, Renderer<Backend, Theme>>
 where
     Backend: iced_graphics::Backend + 'a,
-    Theme: node::StyleSheet + 'a,
+    Theme: StyleSheet + node::StyleSheet + 'a,
     Message: 'a,
 {
     fn from(editor: Editor<'a, Message, Renderer<Backend, Theme>>) -> Self {
         Element::new(editor)
     }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct Appearance {
+    pub background: Option<Background>,
+    pub border_radius: f32,
+    pub border_width: f32,
+    pub border_color: Color,
+}
+
+impl Default for Appearance {
+    fn default() -> Self {
+        Self {
+            background: None,
+            border_radius: 0.0,
+            border_width: 0.0,
+            border_color: Color::TRANSPARENT,
+        }
+    }
+}
+
+pub trait StyleSheet {
+    type Style: Default + Copy;
+
+    fn appearance(&self, style: Self::Style) -> Appearance;
 }
