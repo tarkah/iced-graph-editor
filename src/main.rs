@@ -9,7 +9,11 @@ mod theme;
 mod widget;
 
 fn main() {
-    App::run(Settings::default()).unwrap()
+    App::run(Settings {
+        antialiasing: true,
+        ..Default::default()
+    })
+    .unwrap()
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -21,6 +25,8 @@ enum Message {
 
 struct App {
     nodes: Vec<Node>,
+    scaling: f32,
+    translation: Vector,
     theme: Theme,
 }
 
@@ -57,6 +63,8 @@ impl Application for App {
         (
             App {
                 nodes,
+                scaling: 1.0,
+                translation: Vector::new(0.0, 0.0),
                 theme: Theme::Light,
             },
             Command::none(),
@@ -68,7 +76,7 @@ impl Application for App {
     }
 
     fn theme(&self) -> Theme {
-        self.theme
+        self.theme.clone()
     }
 
     fn update(&mut self, message: Self::Message) -> Command<Self::Message> {
@@ -79,11 +87,23 @@ impl Application for App {
 
                     Command::none()
                 }
+                graph::Event::Scaled(scaling, translation) => {
+                    self.scaling = scaling;
+                    self.translation = translation;
+
+                    Command::none()
+                }
+                graph::Event::Translated(translation) => {
+                    self.translation = translation;
+
+                    Command::none()
+                }
             },
             Message::ToggleTheme => {
-                match self.theme {
+                match &self.theme {
                     Theme::Light => self.theme = Theme::Dark,
                     Theme::Dark => self.theme = Theme::Light,
+                    Theme::Custom(_) => {}
                 }
 
                 Command::none()
@@ -134,15 +154,18 @@ impl Application for App {
             .collect();
 
         container(
-            container(graph::Editor::new(nodes, Message::Graph))
-                .width(Length::Units(500))
-                .height(Length::Units(500))
-                .style(theme::Container::Box),
+            container(
+                graph::Editor::new(nodes, Message::Graph)
+                    .scaling(self.scaling)
+                    .translation(self.translation),
+            )
+            .width(Length::Fill)
+            .height(Length::Fill)
+            .style(theme::Container::Box),
         )
+        .padding(50)
         .width(Length::Fill)
         .height(Length::Fill)
-        .center_x()
-        .center_y()
         .into()
     }
 }

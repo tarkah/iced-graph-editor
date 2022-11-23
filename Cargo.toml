@@ -4,6 +4,8 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-iced = { git = "https://github.com/iced-rs/iced.git", rev = "2278bade55b2bcd530c8c9a30a22d5f800921e55", features=["canvas"] }
-iced_native = { git = "https://github.com/iced-rs/iced.git", rev = "2278bade55b2bcd530c8c9a30a22d5f800921e55" }
-iced_graphics = { git = "https://github.com/iced-rs/iced.git", rev = "2278bade55b2bcd530c8c9a30a22d5f800921e55" }
+iced = { git = "https://github.com/tarkah/iced.git", branch = "feat/primitive-scale", features=["canvas"] }
+iced_native = { git = "https://github.com/tarkah/iced.git", branch = "feat/primitive-scale" }
+iced_graphics = { git = "https://github.com/tarkah/iced.git", branch = "feat/primitive-scale" }
+
+glam = "0.21.3"

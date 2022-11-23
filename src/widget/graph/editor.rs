@@ -1,13 +1,35 @@
 use iced::{Background, Color, Length, Point, Rectangle, Size, Vector};
-use iced_graphics::Renderer;
+use iced_graphics::{Renderer, Transformation};
+use iced_native::widget::tree;
 use iced_native::widget::Tree;
-use iced_native::{event, layout, renderer, Element, Layout, Renderer as _, Widget};
+use iced_native::{event, layout, mouse, renderer, Element, Layout, Renderer as _, Widget};
 
 use super::{node, Node};
 
 #[derive(Debug, Clone, Copy)]
 pub enum Event {
     NodeMoved { index: usize, offset: Vector },
+    Scaled(f32, Vector),
+    Translated(Vector),
+}
+
+#[derive(Debug, Clone, Copy, Default)]
+enum Interaction {
+    #[default]
+    Idle,
+    Translating {
+        started_at: Point,
+        offset: Vector,
+    },
+}
+
+impl Interaction {
+    fn offset(&self) -> Vector {
+        match self {
+            Interaction::Idle => Vector::default(),
+            Interaction::Translating { offset, .. } => *offset,
+        }
+    }
 }
 
 pub struct Editor<'a, Message, Renderer>
@@ -16,6 +38,8 @@ where
     Renderer::Theme: StyleSheet + node::StyleSheet,
 {
     nodes: Vec<Node<'a, Message, Renderer>>,
+    scaling: f32,
+    translation: Vector,
     max_node_size: Size,
     on_event: Box<dyn Fn(Event) -> Message + 'a>,
     style: <Renderer::Theme as StyleSheet>::Style,
@@ -26,21 +50,57 @@ where
     Renderer: iced_native::Renderer,
     Renderer::Theme: StyleSheet + node::StyleSheet,
 {
+    const MIN_SCALING: f32 = 0.1;
+    const MAX_SCALING: f32 = 5.0;
+
     pub fn new(
         nodes: Vec<Node<'a, Message, Renderer>>,
         on_event: impl Fn(Event) -> Message + 'a,
     ) -> Self {
         Self {
             nodes,
+            scaling: 1.0,
+            translation: Vector::new(0.0, 0.0),
             max_node_size: Size::new(300.0, 300.0),
             on_event: Box::new(on_event),
             style: Default::default(),
         }
     }
 
-    pub fn style(mut self, style: impl Into<<Renderer::Theme as StyleSheet>::Style>) -> Self {
-        self.style = style.into();
-        self
+    pub fn style(self, style: impl Into<<Renderer::Theme as StyleSheet>::Style>) -> Self {
+        Self {
+            style: style.into(),
+            ..self
+        }
+    }
+
+    pub fn scaling(self, scaling: f32) -> Self {
+        Self { scaling, ..self }
+    }
+
+    pub fn translation(self, translation: Vector) -> Self {
+        Self {
+            translation,
+            ..self
+        }
+    }
+
+    fn transformation(&self) -> glam::Mat4 {
+        (Transformation::identity()
+            * Transformation::scale(self.scaling, self.scaling)
+            * Transformation::translate(self.translation.x, self.translation.y))
+        .into()
+    }
+
+    fn transform_cursor(&self, cursor_position: Point) -> Point {
+        let Point { x, y } = cursor_position;
+
+        let glam::Vec3 { x, y, .. } = self
+            .transformation()
+            .inverse()
+            .transform_point3(glam::Vec3::new(x, y, 1.0));
+
+        Point::new(x, y)
     }
 }
 
@@ -50,6 +110,14 @@ where
     Backend: iced_graphics::Backend,
     Theme: StyleSheet + node::StyleSheet,
 {
+    fn tag(&self) -> tree::Tag {
+        tree::Tag::of::<Interaction>()
+    }
+
+    fn state(&self) -> tree::State {
+        tree::State::new(Interaction::default())
+    }
+
     fn children(&self) -> Vec<Tree> {
         self.nodes
             .iter()
@@ -105,8 +173,16 @@ where
         renderer: &Renderer<Backend, Theme>,
         clipboard: &mut dyn iced_native::Clipboard,
         shell: &mut iced_native::Shell<'_, Message>,
-    ) -> iced::event::Status {
-        self.nodes
+    ) -> event::Status {
+        let interaction = tree.state.downcast_mut::<Interaction>();
+
+        let bounds = layout.bounds();
+        let contains_cursor = bounds.contains(cursor_position);
+
+        let transformed_cursor = self.transform_cursor(cursor_position);
+
+        let status = self
+            .nodes
             .iter_mut()
             .zip(&mut tree.children)
             .zip(layout.children())
@@ -116,7 +192,7 @@ where
                     state,
                     event.clone(),
                     layout,
-                    cursor_position,
+                    transformed_cursor,
                     renderer,
                     clipboard,
                     shell,
@@ -124,7 +200,64 @@ where
                     &self.on_event,
                 )
             })
-            .fold(event::Status::Ignored, event::Status::merge)
+            .fold(event::Status::Ignored, event::Status::merge);
+
+        if matches!(status, event::Status::Ignored) && contains_cursor {
+            match event {
+                event::Event::Mouse(mouse::Event::ButtonPressed(mouse::Button::Left)) => {
+                    *interaction = Interaction::Translating {
+                        started_at: cursor_position,
+                        offset: Vector::default(),
+                    };
+                    return event::Status::Captured;
+                }
+                event::Event::Mouse(mouse::Event::ButtonReleased(mouse::Button::Left)) => {
+                    if let Interaction::Translating { offset, .. } = interaction {
+                        shell.publish((self.on_event)(Event::Translated(
+                            self.translation + *offset,
+                        )));
+
+                        *interaction = Interaction::Idle;
+                        return event::Status::Captured;
+                    }
+                }
+                event::Event::Mouse(mouse::Event::CursorMoved { position }) => {
+                    if let Interaction::Translating { started_at, offset } = interaction {
+                        *offset = (position - *started_at) * (1.0 / self.scaling);
+                        return event::Status::Captured;
+                    }
+                }
+                event::Event::Mouse(mouse::Event::WheelScrolled { delta }) => match delta {
+                    mouse::ScrollDelta::Lines { y, .. } | mouse::ScrollDelta::Pixels { y, .. } => {
+                        if y < 0.0 && self.scaling > Self::MIN_SCALING
+                            || y > 0.0 && self.scaling < Self::MAX_SCALING
+                        {
+                            let old_scaling = self.scaling;
+
+                            let scaling = (self.scaling * (1.0 + y / 15.0))
+                                .max(Self::MIN_SCALING)
+                                .min(Self::MAX_SCALING);
+                            let factor = scaling - old_scaling;
+
+                            let translation = self.translation
+                                - Vector::new(
+                                    cursor_position.x * factor / (old_scaling * old_scaling),
+                                    cursor_position.y * factor / (old_scaling * old_scaling),
+                                );
+
+                            shell.publish((self.on_event)(Event::Scaled(scaling, translation)));
+
+                            return event::Status::Captured;
+                        }
+                    }
+                },
+                _ => {}
+            }
+
+            event::Status::Ignored
+        } else {
+            status
+        }
     }
 
     fn draw(
@@ -137,6 +270,10 @@ where
         cursor_position: Point,
         viewport: &Rectangle,
     ) {
+        let interaction = tree.state.downcast_ref::<Interaction>();
+
+        let transformed_cursor = self.transform_cursor(cursor_position);
+
         let appearance = <Theme as StyleSheet>::appearance(theme, self.style);
 
         renderer.fill_quad(
@@ -161,23 +298,28 @@ where
         let padded_bounds = pad(layout.bounds(), 1.0);
 
         renderer.with_layer(padded_bounds, |renderer| {
-            self.nodes
-                .iter()
-                .zip(&tree.children)
-                .zip(layout.children())
-                .for_each(|((node, state), layout)| {
-                    node.draw(
-                        state,
-                        renderer,
-                        theme,
-                        style,
-                        layout,
-                        cursor_position,
-                        viewport,
-                    )
+            renderer.with_translation(self.translation + interaction.offset(), |renderer| {
+                renderer.with_scale(self.scaling, |renderer| {
+                    self.nodes
+                        .iter()
+                        .zip(&tree.children)
+                        .zip(layout.children())
+                        .for_each(|((node, state), layout)| {
+                            node.draw(
+                                state,
+                                renderer,
+                                theme,
+                                style,
+                                layout,
+                                transformed_cursor,
+                                viewport,
+                            )
+                        });
                 });
+            });
 
-            {
+            let frame_offset = Vector::new(padded_bounds.x, padded_bounds.y);
+            renderer.with_translation(frame_offset, |renderer| {
                 use iced::widget::canvas::{Frame, Path, Stroke};
 
                 self.nodes
@@ -206,16 +348,26 @@ where
                                     layout.children().nth(to_index).unwrap().bounds(),
                                 );
 
-                                let mut frame = Frame::new(viewport.size());
+                                let mut frame = Frame::new(padded_bounds.size());
 
-                                let start = Point {
-                                    x: from_bounds.x + from_bounds.width,
-                                    y: from_bounds.center_y(),
+                                let transform_point = |point: Point| {
+                                    let translated =
+                                        point + self.translation + interaction.offset();
+
+                                    Point {
+                                        x: translated.x * self.scaling,
+                                        y: translated.y * self.scaling,
+                                    } - frame_offset
                                 };
-                                let end = Point {
+
+                                let start = transform_point(Point {
+                                    x: (from_bounds.x + from_bounds.width),
+                                    y: from_bounds.center_y(),
+                                });
+                                let end = transform_point(Point {
                                     x: to_bounds.x,
                                     y: to_bounds.center_y(),
-                                };
+                                });
 
                                 let path = Path::line(start, end);
 
@@ -226,7 +378,7 @@ where
                             }
                         }
                     });
-            }
+            });
         });
     }
 
@@ -238,12 +390,14 @@ where
         viewport: &Rectangle,
         renderer: &Renderer<Backend, Theme>,
     ) -> iced_native::mouse::Interaction {
+        let transformed_cursor = self.transform_cursor(cursor_position);
+
         self.nodes
             .iter()
             .zip(&tree.children)
             .zip(layout.children())
             .map(|((node, state), layout)| {
-                node.mouse_interaction(state, layout, cursor_position, viewport, renderer)
+                node.mouse_interaction(state, layout, transformed_cursor, viewport, renderer)
             })
             .max()
             .unwrap_or_default()

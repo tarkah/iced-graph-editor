@@ -119,8 +119,8 @@ where
         if let State::Translating { started_at, offset } = state {
             if let iced_native::Event::Mouse(event) = event {
                 match event {
-                    mouse::Event::CursorMoved { position } => {
-                        *offset = position - *started_at;
+                    mouse::Event::CursorMoved { .. } => {
+                        *offset = cursor_position - *started_at;
                         return event::Status::Captured;
                     }
                     mouse::Event::ButtonReleased(mouse::Button::Left) => {
