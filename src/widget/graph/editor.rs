@@ -1,7 +1,9 @@
 use iced::{Background, Color, Length, Point, Rectangle, Size, Vector};
 use iced_graphics::{Renderer, Transformation};
 use iced_native::widget::{tree, Tree};
-use iced_native::{event, layout, mouse, renderer, Element, Layout, Renderer as _, Widget};
+use iced_native::{
+    event, keyboard, layout, mouse, renderer, Element, Layout, Renderer as _, Widget,
+};
 
 use super::{node, Node};
 
@@ -250,6 +252,22 @@ where
                         }
                     }
                 },
+                event::Event::Keyboard(keyboard::Event::KeyPressed {
+                    key_code: keyboard::KeyCode::Space,
+                    ..
+                }) => {
+                    let factor = self.scaling - 1.0;
+
+                    let translation = Vector::default()
+                        - Vector::new(
+                            bounds.x * factor / self.scaling,
+                            bounds.y * factor / self.scaling,
+                        );
+
+                    shell.publish((self.on_event)(Event::Translated(translation)));
+
+                    return event::Status::Captured;
+                }
                 _ => {}
             }
 
