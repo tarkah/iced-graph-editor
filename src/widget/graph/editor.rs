@@ -391,7 +391,7 @@ where
                                 frame.stroke(
                                     &path,
                                     Stroke::default()
-                                        .with_width(5.0 * self.scaling)
+                                        .with_width(2.0 * self.scaling)
                                         .with_color(Color::from_rgb8(77, 84, 92)),
                                 );
 
