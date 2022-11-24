@@ -1,7 +1,6 @@
 use iced::{Background, Color, Length, Point, Rectangle, Size, Vector};
 use iced_graphics::{Renderer, Transformation};
-use iced_native::widget::tree;
-use iced_native::widget::Tree;
+use iced_native::widget::{tree, Tree};
 use iced_native::{event, layout, mouse, renderer, Element, Layout, Renderer as _, Widget};
 
 use super::{node, Node};
@@ -360,18 +359,41 @@ where
                                     } - frame_offset
                                 };
 
-                                let start = transform_point(Point {
+                                let start_untransformed = Point {
                                     x: (from_bounds.x + from_bounds.width),
                                     y: from_bounds.center_y(),
-                                });
-                                let end = transform_point(Point {
+                                };
+                                let start = transform_point(start_untransformed);
+                                let end_untransformed = Point {
                                     x: to_bounds.x,
                                     y: to_bounds.center_y(),
+                                };
+                                let end = transform_point(end_untransformed);
+
+                                let path = Path::new(|p| {
+                                    let control_scale =
+                                        ((end_untransformed.x - start_untransformed.x) / 2.0)
+                                            .max(30.0)
+                                            * self.scaling;
+                                    let control_a = Point {
+                                        x: start.x + control_scale,
+                                        y: start.y,
+                                    };
+                                    let control_b = Point {
+                                        x: end.x - control_scale,
+                                        y: end.y,
+                                    };
+
+                                    p.move_to(start);
+                                    p.bezier_curve_to(control_a, control_b, end);
                                 });
 
-                                let path = Path::line(start, end);
-
-                                frame.stroke(&path, Stroke::default());
+                                frame.stroke(
+                                    &path,
+                                    Stroke::default()
+                                        .with_width(5.0 * self.scaling)
+                                        .with_color(Color::from_rgb8(77, 84, 92)),
+                                );
 
                                 let primitive = frame.into_geometry().into_primitive();
                                 renderer.draw_primitive(primitive);
