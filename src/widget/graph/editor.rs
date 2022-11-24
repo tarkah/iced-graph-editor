@@ -391,8 +391,8 @@ where
                                 frame.stroke(
                                     &path,
                                     Stroke::default()
-                                        .with_width(2.0 * self.scaling)
-                                        .with_color(Color::from_rgb8(77, 84, 92)),
+                                        .with_width(appearance.connector_width * self.scaling)
+                                        .with_color(appearance.connector_color),
                                 );
 
                                 let primitive = frame.into_geometry().into_primitive();
@@ -444,6 +444,8 @@ pub struct Appearance {
     pub border_radius: f32,
     pub border_width: f32,
     pub border_color: Color,
+    pub connector_width: f32,
+    pub connector_color: Color,
 }
 
 impl Default for Appearance {
@@ -453,6 +455,8 @@ impl Default for Appearance {
             border_radius: 0.0,
             border_width: 0.0,
             border_color: Color::TRANSPARENT,
+            connector_width: 1.0,
+            connector_color: Color::BLACK,
         }
     }
 }

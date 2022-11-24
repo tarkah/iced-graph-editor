@@ -41,6 +41,8 @@ impl editor::StyleSheet for Theme {
                 border_radius: 0.0,
                 border_width: 1.0,
                 border_color: self.extended_palette().background.strong.color,
+                connector_width: 2.0,
+                connector_color: self.palette().text,
             },
         }
     }
