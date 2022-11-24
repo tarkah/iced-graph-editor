@@ -8,9 +8,9 @@ pub enum Kind {
     D,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub struct Node {
     pub kind: Kind,
     pub offset: Vector,
-    pub edge: Option<usize>,
+    pub edges: Vec<usize>,
 }

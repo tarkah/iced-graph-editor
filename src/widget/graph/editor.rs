@@ -325,7 +325,7 @@ where
                     .iter()
                     .enumerate()
                     .for_each(|(from_index, from)| {
-                        if let Some(to_index) = from.edge {
+                        for to_index in from.edges.iter().copied() {
                             if self.nodes.get(to_index).is_some() {
                                 let from_state = tree
                                     .children

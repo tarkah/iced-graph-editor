@@ -41,22 +41,22 @@ impl Application for App {
             Node {
                 kind: node::Kind::A,
                 offset: Vector::new(50.0, 50.0),
-                edge: Some(1),
+                edges: vec![1],
             },
             Node {
                 kind: node::Kind::B,
                 offset: Vector::new(150.0, 100.0),
-                edge: Some(3),
+                edges: vec![2, 3],
             },
             Node {
                 kind: node::Kind::C,
-                offset: Vector::new(150.0, 300.0),
-                edge: Some(3),
+                offset: Vector::new(350.0, 25.0),
+                edges: vec![3],
             },
             Node {
                 kind: node::Kind::D,
-                offset: Vector::new(350.0, 200.0),
-                edge: None,
+                offset: Vector::new(500.0, 200.0),
+                edges: vec![],
             },
         ];
 
@@ -110,14 +110,12 @@ impl Application for App {
             }
             Message::DeleteNode(index) => {
                 self.nodes.remove(index);
-                self.nodes.iter_mut().for_each(|node| match &mut node.edge {
-                    edge if *edge == Some(index) => {
-                        edge.take();
-                    }
-                    edge if *edge > Some(index) => {
-                        *edge = edge.map(|index| index - 1);
-                    }
-                    _ => {}
+                self.nodes.iter_mut().for_each(|node| {
+                    node.edges = std::mem::take(&mut node.edges)
+                        .into_iter()
+                        .filter(|i| *i != index)
+                        .map(|i| if i > index { i - 1 } else { i })
+                        .collect();
                 });
 
                 Command::none()
@@ -150,7 +148,7 @@ impl Application for App {
         let nodes = self
             .nodes
             .iter()
-            .map(|node| graph::Node::new(node_content(node.kind), node.offset, node.edge))
+            .map(|node| graph::Node::new(node_content(node.kind), node.offset, node.edges.clone()))
             .collect();
 
         container(

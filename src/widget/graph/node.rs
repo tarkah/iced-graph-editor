@@ -33,7 +33,7 @@ where
 {
     content: Element<'a, Message, Renderer>,
     offset: Vector,
-    pub edge: Option<usize>,
+    pub(super) edges: Vec<usize>,
     style: <Renderer::Theme as StyleSheet>::Style,
 }
 
@@ -45,12 +45,12 @@ where
     pub fn new(
         content: impl Into<Element<'a, Message, Renderer>>,
         offset: Vector,
-        edge: Option<usize>,
+        edges: Vec<usize>,
     ) -> Self {
         Self {
             content: content.into(),
             offset,
-            edge,
+            edges,
             style: Default::default(),
         }
     }
