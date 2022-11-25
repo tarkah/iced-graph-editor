@@ -235,18 +235,21 @@ where
                         {
                             let old_scaling = self.scaling;
 
-                            let scaling = (self.scaling * (1.0 + y / 15.0))
+                            self.scaling = (self.scaling * (1.0 + y / 15.0))
                                 .max(Self::MIN_SCALING)
                                 .min(Self::MAX_SCALING);
-                            let factor = scaling - old_scaling;
 
-                            let translation = self.translation
-                                - Vector::new(
-                                    cursor_position.x * factor / (old_scaling * old_scaling),
-                                    cursor_position.y * factor / (old_scaling * old_scaling),
-                                );
+                            let change = self.scaling / old_scaling - 1.0;
 
-                            shell.publish((self.on_event)(Event::Scaled(scaling, translation)));
+                            self.translation = self.translation
+                                - Vector::new(cursor_position.x, cursor_position.y)
+                                    * change
+                                    * (1.0 / self.scaling);
+
+                            shell.publish((self.on_event)(Event::Scaled(
+                                self.scaling,
+                                self.translation,
+                            )));
 
                             return event::Status::Captured;
                         }
