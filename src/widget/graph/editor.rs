@@ -103,6 +103,30 @@ where
 
         Point::new(x, y)
     }
+
+    fn zoom(&mut self, y: f32, position: Point) {
+        let old_scaling = self.scaling;
+
+        self.scaling = (self.scaling * (1.0 + y / 15.0))
+            .max(Self::MIN_SCALING)
+            .min(Self::MAX_SCALING);
+
+        let change = self.scaling / old_scaling - 1.0;
+
+        self.translation =
+            self.translation - Vector::new(position.x, position.y) * change * (1.0 / self.scaling);
+    }
+
+    fn reset_zoom(&mut self, position: Point) {
+        let old_scaling = self.scaling;
+
+        self.scaling = 1.0;
+
+        let change = self.scaling / old_scaling - 1.0;
+
+        self.translation =
+            self.translation - Vector::new(position.x, position.y) * change * (1.0 / self.scaling);
+    }
 }
 
 impl<'a, Message, Backend, Theme> Widget<Message, Renderer<Backend, Theme>>
@@ -233,18 +257,7 @@ where
                         if y < 0.0 && self.scaling > Self::MIN_SCALING
                             || y > 0.0 && self.scaling < Self::MAX_SCALING
                         {
-                            let old_scaling = self.scaling;
-
-                            self.scaling = (self.scaling * (1.0 + y / 15.0))
-                                .max(Self::MIN_SCALING)
-                                .min(Self::MAX_SCALING);
-
-                            let change = self.scaling / old_scaling - 1.0;
-
-                            self.translation = self.translation
-                                - Vector::new(cursor_position.x, cursor_position.y)
-                                    * change
-                                    * (1.0 / self.scaling);
+                            self.zoom(y, cursor_position);
 
                             shell.publish((self.on_event)(Event::Scaled(
                                 self.scaling,
@@ -256,18 +269,57 @@ where
                     }
                 },
                 event::Event::Keyboard(keyboard::Event::KeyPressed {
+                    key_code: keyboard::KeyCode::Minus,
+                    ..
+                }) => {
+                    self.zoom(-1.0, bounds.position());
+
+                    shell.publish((self.on_event)(Event::Scaled(
+                        self.scaling,
+                        self.translation,
+                    )));
+
+                    return event::Status::Captured;
+                }
+                event::Event::Keyboard(keyboard::Event::KeyPressed {
+                    key_code: keyboard::KeyCode::Equals,
+                    ..
+                }) => {
+                    self.zoom(1.0, bounds.position());
+
+                    shell.publish((self.on_event)(Event::Scaled(
+                        self.scaling,
+                        self.translation,
+                    )));
+
+                    return event::Status::Captured;
+                }
+                event::Event::Keyboard(keyboard::Event::KeyPressed {
+                    key_code: keyboard::KeyCode::Key0,
+                    ..
+                }) => {
+                    self.reset_zoom(bounds.position());
+
+                    shell.publish((self.on_event)(Event::Scaled(
+                        self.scaling,
+                        self.translation,
+                    )));
+
+                    return event::Status::Captured;
+                }
+                event::Event::Keyboard(keyboard::Event::KeyPressed {
                     key_code: keyboard::KeyCode::Space,
                     ..
                 }) => {
                     let factor = self.scaling - 1.0;
 
-                    let translation = Vector::default()
+                    self.translation = Vector::default()
                         - Vector::new(
                             bounds.x * factor / self.scaling,
                             bounds.y * factor / self.scaling,
                         );
 
-                    shell.publish((self.on_event)(Event::Translated(translation)));
+                    shell.publish((self.on_event)(Event::Translated(self.translation)));
 
                     return event::Status::Captured;
                 }
