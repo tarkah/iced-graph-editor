@@ -1,11 +1,19 @@
 [package]
-name = "iced-graph-editor"
+name = "iced_graph_editor"
 version = "0.1.0"
 edition = "2021"
 
+[workspace]
+members = [
+    ".",
+    "example",
+]
+default-members = ["example"]
+
 [dependencies]
-iced = { git = "https://github.com/tarkah/iced.git", branch = "feat/primitive-scale", features=["canvas"] }
-iced_native = { git = "https://github.com/tarkah/iced.git", branch = "feat/primitive-scale" }
+iced_core = { git = "https://github.com/tarkah/iced.git", branch = "feat/primitive-scale" }
 iced_graphics = { git = "https://github.com/tarkah/iced.git", branch = "feat/primitive-scale" }
+iced_native = { git = "https://github.com/tarkah/iced.git", branch = "feat/primitive-scale" }
+iced_style = { git = "https://github.com/tarkah/iced.git", branch = "feat/primitive-scale" }
 
 glam = "0.21.3"

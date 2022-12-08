@@ -1,4 +1,4 @@
-use iced::{Background, Color, Point, Rectangle, Vector};
+use iced_core::{Background, Color, Point, Rectangle, Vector};
 use iced_native::widget::{tree, Tree};
 use iced_native::{event, layout, mouse, renderer, Element, Layout, Shell};
 

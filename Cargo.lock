@@ -546,6 +546,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "example"
+version = "0.1.0"
+dependencies = [
+ "iced",
+ "iced_graph_editor",
+]
+
+[[package]]
 name = "expat-sys"
 version = "2.1.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -918,16 +926,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "iced-graph-editor"
-version = "0.1.0"
-dependencies = [
- "glam",
- "iced",
- "iced_graphics",
- "iced_native",
-]
-
-[[package]]
 name = "iced_core"
 version = "0.6.1"
 source = "git+https://github.com/tarkah/iced.git?branch=feat/primitive-scale#c4ff9381877b360d6aaa433424039efb09c79c43"
@@ -946,6 +944,17 @@ dependencies = [
  "log",
  "wasm-bindgen-futures",
  "wasm-timer",
+]
+
+[[package]]
+name = "iced_graph_editor"
+version = "0.1.0"
+dependencies = [
+ "glam",
+ "iced_core",
+ "iced_graphics",
+ "iced_native",
+ "iced_style",
 ]
 
 [[package]]

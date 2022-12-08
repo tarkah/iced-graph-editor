@@ -1,0 +1,9 @@
+[package]
+name = "example"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+iced_graph_editor = { path = "../" }
+
+iced = { git = "https://github.com/tarkah/iced.git", branch = "feat/primitive-scale", features=["canvas"] }

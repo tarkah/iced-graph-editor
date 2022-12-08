@@ -1,4 +1,4 @@
-use iced::{Background, Color, Length, Point, Rectangle, Size, Vector};
+use iced_core::{Background, Color, Length, Point, Rectangle, Size, Vector};
 use iced_graphics::{Renderer, Transformation};
 use iced_native::widget::{tree, Tree};
 use iced_native::{
@@ -192,7 +192,7 @@ where
     fn on_event(
         &mut self,
         tree: &mut Tree,
-        event: iced::Event,
+        event: iced_native::Event,
         layout: Layout<'_>,
         cursor_position: Point,
         renderer: &Renderer<Backend, Theme>,
@@ -392,7 +392,7 @@ where
 
             let frame_offset = Vector::new(padded_bounds.x, padded_bounds.y);
             renderer.with_translation(frame_offset, |renderer| {
-                use iced::widget::canvas::{Frame, Path, Stroke};
+                use iced_graphics::widget::canvas::{Frame, Path, Stroke};
 
                 self.nodes
                     .iter()

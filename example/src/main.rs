@@ -1,12 +1,11 @@
 use iced::widget::{button, column, container, text};
-use iced::{executor, Application, Command, Element, Length, Settings, Theme, Vector};
+use iced::{executor, theme, Application, Command, Element, Length, Settings, Theme, Vector};
+
+use iced_graph_editor::widget::graph;
 
 use self::node::Node;
-use self::widget::graph;
 
 mod node;
-mod theme;
-mod widget;
 
 fn main() {
     App::run(Settings {
