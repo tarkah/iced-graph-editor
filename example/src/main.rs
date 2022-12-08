@@ -2,6 +2,7 @@ use iced::widget::{button, column, container, text};
 use iced::{executor, theme, Application, Command, Element, Length, Settings, Theme, Vector};
 
 use iced_graph_editor::widget::graph;
+use iced_graph_editor::widget::graph::editor;
 
 use self::node::Node;
 
@@ -17,7 +18,7 @@ fn main() {
 
 #[derive(Debug, Clone, Copy)]
 enum Message {
-    Graph(graph::Event),
+    Graph(editor::Event),
     ToggleTheme,
     DeleteNode(usize),
 }
@@ -81,18 +82,18 @@ impl Application for App {
     fn update(&mut self, message: Self::Message) -> Command<Self::Message> {
         match message {
             Message::Graph(event) => match event {
-                graph::Event::NodeMoved { index, offset } => {
+                editor::Event::NodeMoved { index, offset } => {
                     self.nodes[index].offset = offset;
 
                     Command::none()
                 }
-                graph::Event::Scaled(scaling, translation) => {
+                editor::Event::Scaled(scaling, translation) => {
                     self.scaling = scaling;
                     self.translation = translation;
 
                     Command::none()
                 }
-                graph::Event::Translated(translation) => {
+                editor::Event::Translated(translation) => {
                     self.translation = translation;
 
                     Command::none()

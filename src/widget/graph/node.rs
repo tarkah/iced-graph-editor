@@ -2,7 +2,7 @@ use iced_core::{Background, Color, Point, Rectangle, Vector};
 use iced_native::widget::{tree, Tree};
 use iced_native::{event, layout, mouse, renderer, Element, Layout, Shell};
 
-use super::Event;
+use super::editor::Event;
 
 #[derive(Debug)]
 pub enum State {
@@ -107,7 +107,7 @@ where
         clipboard: &mut dyn iced_native::Clipboard,
         shell: &mut Shell<'_, Message>,
         index: usize,
-        on_event: &dyn Fn(super::Event) -> Message,
+        on_event: &dyn Fn(Event) -> Message,
     ) -> event::Status {
         let bounds = layout.bounds();
         let content_bounds = layout.children().next().unwrap().bounds();
